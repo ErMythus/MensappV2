@@ -13,6 +13,16 @@ class _AddCodeScreenState extends State<AddCodeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('Aggiungi Codice'),
+        leading: IconButton(
+          icon: const Icon(Icons.home),
+          onPressed: () {
+            Navigator.of(context).popUntil((route) => route.isFirst);
+          },
+          tooltip: "Torna alla Home",
+        ),
+      ),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -23,12 +33,12 @@ class _AddCodeScreenState extends State<AddCodeScreen> {
             ),
             Text("Select an option below to start scanning QR codes."),
 
-            SizedBox(height: 48),
+            SizedBox(height: 32),
 
             HugeButtonWithIcon(
               image: SvgPicture.asset("assets/svg/qr-code.svg", width: 80),
               title: "Scan QR Code",
-              description: "Scan a QR Code generated  from laziodisco.it",
+              description: "Scan a QR Code generated from laziodisco.it",
               onClick: () => Navigator.pushNamed(context, "/qr_scanner"),
             ),
             SizedBox(height: 16),

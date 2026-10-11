@@ -6,7 +6,6 @@ import 'package:mensapp_v2/utils/cardutils.dart';
 import 'package:mensapp_v2/utils/title_case.dart';
 import 'package:otp/otp.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -18,25 +17,40 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   String _generatedTotp = "";
   String _user = "";
+  UserData? _currentProfile;
+  List<UserData> _allProfiles = [];
+  Timer? _timer;
 
-  void startTotpGeneration() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    var userDataString = prefs.getString("user-data");
+  @override
+  void initState() {
+    super.initState();
+    _loadProfiles();
+  }
 
-    if (userDataString == null) {
-      if (context.mounted) {
-        Navigator.of(context).pushReplacementNamed("/");
+  Future<void> _loadProfiles() async {
+    final profiles = await ProfileManager.getAllProfiles();
+    final current = await ProfileManager.getCurrentProfile();
+    
+    if (mounted) {
+      setState(() {
+        _allProfiles = profiles;
+        _currentProfile = current;
+      });
+      
+      if (_currentProfile != null) {
+        _startTotpGeneration();
       }
-      return;
     }
+  }
 
-    var userData = UserData.fromJson(jsonDecode(userDataString));
+  void _startTotpGeneration() {
+    if (_currentProfile == null) return;
+
+    final userData = _currentProfile!;
 
     var generatedTotp = OTP.generateTOTPCodeString(
       userData.cardData.cardSecret,
-      DateTime
-          .now()
-          .millisecondsSinceEpoch +
+      DateTime.now().millisecondsSinceEpoch +
           userData.cardData.cardInterval * 1000,
       interval: userData.cardData.cardInterval,
       algorithm: Algorithm.SHA256,
@@ -46,8 +60,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
     _user = "${userData.name} ${userData.lastName}".toTitleCase();
 
-    // start periodic update
-    Timer.periodic(Duration(seconds: 1), (timer) {
+    _timer?.cancel();
+    _timer = Timer.periodic(Duration(seconds: 1), (timer) {
       if (!mounted) {
         timer.cancel();
         return;
@@ -56,9 +70,7 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         generatedTotp = OTP.generateTOTPCodeString(
           userData.cardData.cardSecret,
-          DateTime
-              .now()
-              .millisecondsSinceEpoch +
+          DateTime.now().millisecondsSinceEpoch +
               userData.cardData.cardInterval * 1000,
           interval: userData.cardData.cardInterval,
           algorithm: Algorithm.SHA1,
@@ -73,15 +85,91 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  Future<void> _switchProfile(UserData profile) async {
+    await ProfileManager.setCurrentProfileId(profile.id);
+    setState(() {
+      _currentProfile = profile;
+    });
+    _startTotpGeneration();
+  }
+
+  void _deleteProfile(UserData profile) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Delete Profile"),
+          content: Text("Are you sure you want to delete ${profile.name}'s profile?"),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancel"),
+            ),
+            TextButton(
+              onPressed: () async {
+                await ProfileManager.deleteProfile(profile.id);
+                Navigator.pop(context);
+                _loadProfiles();
+              },
+              child: const Text("Delete", style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
-  void initState() {
-    super.initState();
-    startTotpGeneration();
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            DrawerHeader(
+              decoration: BoxDecoration(color: Colors.blue),
+              child: Text(
+                'Profili',
+                style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+            ),
+            ..._allProfiles.map((profile) {
+              final isSelected = profile.id == _currentProfile?.id;
+              return ListTile(
+                leading: Icon(Icons.person, color: isSelected ? Colors.blue : null),
+                title: Text("${profile.name} ${profile.lastName}"),
+                selected: isSelected,
+                trailing: IconButton(
+                  icon: Icon(Icons.delete, color: Colors.red),
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _deleteProfile(profile);
+                  },
+                ),
+                onTap: () {
+                  _switchProfile(profile);
+                  Navigator.pop(context);
+                },
+              );
+            }).toList(),
+            Divider(),
+            ListTile(
+              leading: Icon(Icons.add),
+              title: const Text("Add Profile"),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, "/add_code");
+              },
+            ),
+          ],
+        ),
+      ),
       bottomNavigationBar: BottomAppBar(
         padding: const EdgeInsets.all(0),
         color: Colors.white,
@@ -92,7 +180,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           child: Center(
             child: Text(
-              "In onore di Fra ingiustamente avvelenato",
+              "Buon pranzo!",
               style: TextStyle(color: Colors.black, fontSize: 12),
             ),
           ),
@@ -109,7 +197,6 @@ class _HomeScreenState extends State<HomeScreen> {
               if (value == "share") {
                 Navigator.of(context).pushNamed("/share");
               } else if (value == "logout") {
-                // ask for confirmation
                 showDialog<bool>(
                   context: context,
                   builder: (BuildContext context) {
@@ -137,11 +224,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   },
                 ).then((value) {
                   if (value == true && context.mounted) {
-                    SharedPreferences.getInstance().then((prefs) {
-                      prefs.remove("user-data");
-                      Navigator.of(
-                        context,
-                      ).pushNamedAndRemoveUntil("/", (route) => false);
+                    ProfileManager.deleteProfile(_currentProfile!.id).then((_) {
+                      Navigator.of(context).pushNamedAndRemoveUntil("/", (route) => false);
                     });
                   }
                 });
@@ -167,26 +251,28 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
         backgroundColor: Colors.blue,
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Text(_user),
-            SizedBox(height: 16),
-            QrImageView(data: _generatedTotp, size: 350),
-            SizedBox(height: 16),
-            SizedBox(
-              width: 350,
-              child: Text(
-                "Scannerizza questo QR code all'entrata della mensa e spera che il cibo sia commestibile :P",
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold),
+      body: _currentProfile == null
+          ? const Center(child: CircularProgressIndicator())
+          : Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text(_user),
+                  SizedBox(height: 16),
+                  QrImageView(data: _generatedTotp, size: 350),
+                  SizedBox(height: 16),
+                  SizedBox(
+                    width: 350,
+                    child: Text(
+                      "Scannerizza questo QR code all'entrata della mensa e spera che il cibo sia commestibile :P",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
-      ),
     );
   }
 }

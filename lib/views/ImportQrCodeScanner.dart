@@ -1,7 +1,7 @@
-
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:mensapp_v2/utils/cardutils.dart';
 
 class ImportBarcodeScanner extends StatefulWidget {
   const ImportBarcodeScanner({super.key});
@@ -25,11 +25,15 @@ class _ImportBarcodeScannerState extends State<ImportBarcodeScanner> {
     String qrContent,
     MobileScannerController controller,
   ) async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setString("user-data", qrContent);
+    try {
+      final userData = UserData.fromJson(jsonDecode(qrContent));
+      await ProfileManager.addProfile(userData);
 
-    if (mounted) {
-      Navigator.pushNamedAndRemoveUntil(context, "/home", (route) => false);
+      if (mounted) {
+        Navigator.pushNamedAndRemoveUntil(context, "/home", (route) => false);
+      }
+    } catch (e) {
+      throw Exception("Invalid profile data");
     }
   }
 

@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:mensapp_v2/utils/cardutils.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class BarcodeScannerSimple extends StatefulWidget {
   const BarcodeScannerSimple({super.key});
@@ -33,8 +32,7 @@ class _BarcodeScannerSimpleState extends State<BarcodeScannerSimple> {
       return false;
     }
 
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setString("user-data", jsonEncode(data.toJson()));
+    await ProfileManager.addProfile(data);
 
     if (mounted) {
       Navigator.pushNamedAndRemoveUntil(context, "/home", (route) => false);

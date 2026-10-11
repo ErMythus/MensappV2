@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
+import 'package:mensapp_v2/utils/cardutils.dart';
 
 class Share extends StatefulWidget {
   const Share({super.key});
@@ -12,17 +13,22 @@ class Share extends StatefulWidget {
 class _ShareState extends State<Share> {
   bool _showWarning = true;
   String userData = "";
+  String _profileName = "";
 
   void initUserData() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    setState(() {
-      userData = prefs.getString("user-data") ?? "";
-    });
+    final profile = await ProfileManager.getCurrentProfile();
+    if (mounted) {
+      setState(() {
+        if (profile != null) {
+          userData = jsonEncode(profile.toJson());
+          _profileName = "${profile.name} ${profile.lastName}";
+        }
+      });
+    }
   }
 
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
     initUserData();
   }
@@ -82,6 +88,11 @@ class _ShareState extends State<Share> {
         crossAxisAlignment: CrossAxisAlignment.center,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
+          Text(
+            "Sharing: $_profileName",
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          SizedBox(height: 16),
           QrImageView(data: userData, size: 350),
           SizedBox(height: 16),
           SizedBox(
@@ -101,6 +112,7 @@ class _ShareState extends State<Share> {
     );
   }
 
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(

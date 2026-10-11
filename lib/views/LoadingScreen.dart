@@ -1,22 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:mensapp_v2/utils/cardutils.dart';
 
 class LoadingScreen extends StatelessWidget {
   const LoadingScreen({super.key});
 
   Future<void> loadData(BuildContext context) async {
-    var sharedPrefs = await SharedPreferences.getInstance();
-
-    // Load data from shared preferences
-    var secretKey = sharedPrefs.getString("user-data");
-    if (secretKey != null) {
-      if (context.mounted) {
-        print("SECRET: $secretKey");
-        Navigator.pushReplacementNamed(context, "/home");
-      }
-    } else {
-      if (context.mounted) {
+    final profiles = await ProfileManager.getAllProfiles();
+    
+    if (context.mounted) {
+      if (profiles.isEmpty) {
         Navigator.pushReplacementNamed(context, "/add_code");
+      } else {
+        final currentProfile = await ProfileManager.getCurrentProfile();
+        if (currentProfile != null) {
+          Navigator.pushReplacementNamed(context, "/home");
+        }
       }
     }
   }
