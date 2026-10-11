@@ -36,7 +36,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   shared_preferences: ^2.5.2
   flutter_svg: ^2.0.17
-  mobile_scanner: ^5.0.0
+  mobile_scanner: ^6.0.6
   http: ^1.3.0
   otp: 3.0.4
   qr_flutter: ^4.1.0
