@@ -1,5 +1,4 @@
 platform :ios, '15.5'
-require_relative '.symlinks/flutter/ios-latest-version'
 
 target 'Runner' do
   use_frameworks!
