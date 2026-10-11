@@ -148,7 +148,7 @@ class ProfileManager {
   static Future<void> deleteProfile(String id) async {
     final prefs = await SharedPreferences.getInstance();
     final ids = await getProfileIds();
-    ids.remove(id);
+    ids.removeWhere((profileId) => profileId == id); //This doesn't use ids.remove(id) cause there might be more instances of the same object.
     
     await saveProfileIds(ids);
     await prefs.remove('$_userDataPrefix$id');
