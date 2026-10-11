@@ -14,6 +14,7 @@ class BarcodeScannerSimple extends StatefulWidget {
 class _BarcodeScannerSimpleState extends State<BarcodeScannerSimple> {
   Barcode? _barcode;
   final MobileScannerController _controller = MobileScannerController();
+  bool _isProcessing = false;
 
   Widget _buildBarcode(Barcode? value) {
     return const Text(
@@ -42,6 +43,8 @@ class _BarcodeScannerSimpleState extends State<BarcodeScannerSimple> {
   }
 
   void _handleBarcode(BarcodeCapture barcodes) {
+    if (_isProcessing) return;
+
     var barcode = barcodes.barcodes.firstOrNull;
 
     if (barcode == null) {
@@ -54,8 +57,11 @@ class _BarcodeScannerSimpleState extends State<BarcodeScannerSimple> {
       return;
     }
 
+    _isProcessing = true;
+
     parseNewData(content, _controller)
         .then((value) {
+          _isProcessing = false;
           if (!value && mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -66,6 +72,7 @@ class _BarcodeScannerSimpleState extends State<BarcodeScannerSimple> {
           }
         })
         .onError((e, trace) {
+          _isProcessing = false;
           debugPrint(e.toString());
           if (!mounted) {
             return;

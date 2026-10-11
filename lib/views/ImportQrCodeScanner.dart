@@ -13,6 +13,7 @@ class ImportBarcodeScanner extends StatefulWidget {
 class _ImportBarcodeScannerState extends State<ImportBarcodeScanner> {
   Barcode? _barcode;
   final MobileScannerController _controller = MobileScannerController();
+  bool _isProcessing = false;
 
   Widget _buildBarcode(Barcode? value) {
     return const Text(
@@ -38,6 +39,8 @@ class _ImportBarcodeScannerState extends State<ImportBarcodeScanner> {
   }
 
   void _handleBarcode(BarcodeCapture barcodes) {
+    if (_isProcessing) return;
+
     var barcode = barcodes.barcodes.firstOrNull;
 
     if (barcode == null) {
@@ -50,7 +53,10 @@ class _ImportBarcodeScannerState extends State<ImportBarcodeScanner> {
       return;
     }
 
+    _isProcessing = true;
+
     parseNewData(content, _controller).onError((E, stackTrace) {
+      _isProcessing = false;
       if (!mounted) {
         return;
       }
