@@ -19,15 +19,8 @@ jobs:
       
       - run: flutter pub get
       
-      - name: Update iOS minimum deployment target
-        run: |
-          sed -i '' 's/IPHONEOS_DEPLOYMENT_TARGET = [0-9.]*;/IPHONEOS_DEPLOYMENT_TARGET = 15.5;/g' ios/Podfile.lock 2>/dev/null || true
-          sed -i '' "s/platform :ios, '[^']*'/platform :ios, '15.5'/g" ios/Podfile
-      
-      #- run: flutter test
-      
       - name: Build iOS
-        run: flutter build ios --release --no-codesign
+        run: flutter build ios --release --no-codesign --no-podfile-repo-update
       
       - name: Create IPA
         run: |
