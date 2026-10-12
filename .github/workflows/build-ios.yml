@@ -19,6 +19,9 @@ jobs:
       
       - run: flutter pub get
       
+      - name: Update iOS minimum version in Podfile
+        run: sed -i '' "s/platform :ios, '[^']*'/platform :ios, '15.5'/" ios/Podfile
+      
       #- run: flutter test
       
       - name: Build iOS
